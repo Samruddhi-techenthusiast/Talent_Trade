@@ -39,6 +39,23 @@ public class User {
     @Builder.Default
     private boolean enabled = true;
 
+    // ── Profile fields ──────────────────────────────────────────────────────
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(length = 150)
+    private String location;
+
+    @Column(length = 500)
+    private String profileImageUrl;
+
+    @Column(length = 300)
+    private String linkedinUrl;
+
+    @Column(length = 300)
+    private String githubUrl;
+    // ────────────────────────────────────────────────────────────────────────
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
