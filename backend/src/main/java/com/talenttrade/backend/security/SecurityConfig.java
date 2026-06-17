@@ -65,6 +65,7 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
 
+
                         // Swagger / OpenAPI (optional, for dev)
                         .requestMatchers(
                                 "/v3/api-docs/**",
@@ -75,6 +76,7 @@ public class SecurityConfig {
                         // Admin-only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
+                        .requestMatchers("/api/skills/**").authenticated()   // ← NEW
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )

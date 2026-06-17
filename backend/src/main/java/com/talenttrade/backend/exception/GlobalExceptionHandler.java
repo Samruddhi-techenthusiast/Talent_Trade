@@ -21,56 +21,69 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // ── Domain exceptions ─────────────────────────────────────────────────────
+
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<ApiErrorResponse> handleUserAlreadyExists(
             UserAlreadyExistsException ex, HttpServletRequest request) {
-        log.error("User already exists: {}", ex.getMessage());
-        return buildErrorResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request.getRequestURI());
+        log.warn("User already exists: {}", ex.getMessage());
+        return build(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleResourceNotFound(
             ResourceNotFoundException ex, HttpServletRequest request) {
-        log.error("Resource not found: {}", ex.getMessage());
-        return buildErrorResponse(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request.getRequestURI());
+        log.warn("Resource not found: {}", ex.getMessage());
+        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidCredentials(
             InvalidCredentialsException ex, HttpServletRequest request) {
-        log.error("Invalid credentials: {}", ex.getMessage());
-        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage(), request.getRequestURI());
+        log.warn("Invalid credentials: {}", ex.getMessage());
+        return build(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage(), request);
     }
+
+    /** NEW — handles duplicate skill name per user */
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateResource(
+            DuplicateResourceException ex, HttpServletRequest request) {
+        log.warn("Duplicate resource: {}", ex.getMessage());
+        return build(HttpStatus.CONFLICT, "Duplicate Resource", ex.getMessage(), request);
+    }
+
+    // ── Spring Security exceptions ────────────────────────────────────────────
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleBadCredentials(
             BadCredentialsException ex, HttpServletRequest request) {
-        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Unauthorized",
-                "Invalid email or password", request.getRequestURI());
+        return build(HttpStatus.UNAUTHORIZED, "Unauthorized", "Invalid email or password", request);
     }
 
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<ApiErrorResponse> handleDisabledAccount(
             DisabledException ex, HttpServletRequest request) {
-        return buildErrorResponse(HttpStatus.FORBIDDEN, "Forbidden",
-                "Your account has been disabled. Please contact support.", request.getRequestURI());
+        return build(HttpStatus.FORBIDDEN, "Forbidden",
+                "Your account has been disabled. Please contact support.", request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(
             AccessDeniedException ex, HttpServletRequest request) {
-        return buildErrorResponse(HttpStatus.FORBIDDEN, "Forbidden",
-                "You do not have permission to access this resource", request.getRequestURI());
+        return build(HttpStatus.FORBIDDEN, "Forbidden",
+                "You do not have permission to access this resource.", request);
     }
 
+    // ── Validation exceptions ─────────────────────────────────────────────────
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidationErrors(
+    public ResponseEntity<ApiErrorResponse> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
-        Map<String, String> validationErrors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            validationErrors.put(fieldName, errorMessage);
+
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach(err -> {
+            String field = ((FieldError) err).getField();
+            errors.put(field, err.getDefaultMessage());
         });
 
         ApiErrorResponse response = ApiErrorResponse.builder()
@@ -79,29 +92,35 @@ public class GlobalExceptionHandler {
                 .message("Input validation failed. Please check the errors.")
                 .path(request.getRequestURI())
                 .timestamp(LocalDateTime.now())
-                .validationErrors(validationErrors)
+                .validationErrors(errors)
                 .build();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    // ── Fallback ──────────────────────────────────────────────────────────────
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleGenericException(
+    public ResponseEntity<ApiErrorResponse> handleGeneric(
             Exception ex, HttpServletRequest request) {
-        log.error("Unexpected error occurred: {}", ex.getMessage(), ex);
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error",
-                "An unexpected error occurred. Please try again later.", request.getRequestURI());
+        log.error("Unexpected error at {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error",
+                "An unexpected error occurred. Please try again later.", request);
     }
 
-    private ResponseEntity<ApiErrorResponse> buildErrorResponse(
-            HttpStatus status, String error, String message, String path) {
-        ApiErrorResponse response = ApiErrorResponse.builder()
+    // ── Helper ────────────────────────────────────────────────────────────────
+
+    private ResponseEntity<ApiErrorResponse> build(
+            HttpStatus status, String error, String message, HttpServletRequest request) {
+
+        ApiErrorResponse body = ApiErrorResponse.builder()
                 .status(status.value())
                 .error(error)
                 .message(message)
-                .path(path)
+                .path(request.getRequestURI())
                 .timestamp(LocalDateTime.now())
                 .build();
-        return ResponseEntity.status(status).body(response);
+
+        return ResponseEntity.status(status).body(body);
     }
 }
