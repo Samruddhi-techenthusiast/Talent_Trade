@@ -22,9 +22,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final CustomUserDetailsService userDetailsService;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final CustomUserDetailsService       userDetailsService;
+    private final JwtAuthenticationFilter        jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint    jwtAuthenticationEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -47,44 +47,39 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF (stateless JWT API)
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // Set unauthorized request handler
-                .exceptionHandling(exception -> exception
+                .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 )
 
-                // Set session management to stateless
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // Set permissions on endpoints
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+
+                        // ── Public ────────────────────────────────────────────────────
                         .requestMatchers("/api/auth/**").permitAll()
-
-
-                        // Swagger / OpenAPI (optional, for dev)
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // Admin-only endpoints
+                        // ── Admin only ────────────────────────────────────────────────
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        .requestMatchers("/api/skills/**").authenticated()   // ← NEW
-                        // All other endpoints require authentication
+                        // ── Protected modules — fine-grained via @PreAuthorize ────────
+                        .requestMatchers("/api/users/**").authenticated()
+                        .requestMatchers("/api/skills/**").authenticated()
+                        .requestMatchers("/api/trades/**").authenticated()   // ← NEW
+
+                        // ── Everything else ───────────────────────────────────────────
                         .anyRequest().authenticated()
                 )
 
-                // Add authentication provider
                 .authenticationProvider(authenticationProvider())
-
-                // Add JWT token filter before UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

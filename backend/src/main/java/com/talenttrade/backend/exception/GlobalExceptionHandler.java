@@ -44,12 +44,34 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage(), request);
     }
 
-    /** NEW — handles duplicate skill name per user */
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ApiErrorResponse> handleDuplicateResource(
             DuplicateResourceException ex, HttpServletRequest request) {
         log.warn("Duplicate resource: {}", ex.getMessage());
         return build(HttpStatus.CONFLICT, "Duplicate Resource", ex.getMessage(), request);
+    }
+
+    // ── Trade exceptions (NEW) ───────────────────────────────────────────────
+
+    @ExceptionHandler(TradeNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleTradeNotFound(
+            TradeNotFoundException ex, HttpServletRequest request) {
+        log.warn("Trade not found: {}", ex.getMessage());
+        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidTradeException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidTrade(
+            InvalidTradeException ex, HttpServletRequest request) {
+        log.warn("Invalid trade operation: {}", ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, "Invalid Operation", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(UnauthorizedTradeActionException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnauthorizedTradeAction(
+            UnauthorizedTradeActionException ex, HttpServletRequest request) {
+        log.warn("Unauthorized trade action: {}", ex.getMessage());
+        return build(HttpStatus.FORBIDDEN, "Forbidden", ex.getMessage(), request);
     }
 
     // ── Spring Security exceptions ────────────────────────────────────────────
