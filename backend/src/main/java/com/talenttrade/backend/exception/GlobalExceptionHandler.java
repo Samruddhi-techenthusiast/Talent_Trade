@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "Duplicate Resource", ex.getMessage(), request);
     }
 
-    // ── Trade exceptions (NEW) ───────────────────────────────────────────────
+    // ── Trade exceptions ──────────────────────────────────────────────────────
 
     @ExceptionHandler(TradeNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleTradeNotFound(
@@ -72,6 +72,22 @@ public class GlobalExceptionHandler {
             UnauthorizedTradeActionException ex, HttpServletRequest request) {
         log.warn("Unauthorized trade action: {}", ex.getMessage());
         return build(HttpStatus.FORBIDDEN, "Forbidden", ex.getMessage(), request);
+    }
+
+    // ── Rating exceptions (NEW) ───────────────────────────────────────────────
+
+    @ExceptionHandler(DuplicateRatingException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateRating(
+            DuplicateRatingException ex, HttpServletRequest request) {
+        log.warn("Duplicate rating attempt: {}", ex.getMessage());
+        return build(HttpStatus.CONFLICT, "Duplicate Rating", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidRatingException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidRating(
+            InvalidRatingException ex, HttpServletRequest request) {
+        log.warn("Invalid rating attempt: {}", ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, "Invalid Rating", ex.getMessage(), request);
     }
 
     // ── Spring Security exceptions ────────────────────────────────────────────

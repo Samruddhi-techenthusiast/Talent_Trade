@@ -1,6 +1,7 @@
 package com.talenttrade.backend.dto.request;
 
 import com.talenttrade.backend.model.entity.SkillLevel;
+import com.talenttrade.backend.model.entity.SkillType;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -11,6 +12,8 @@ public class SkillRequest {
     @Size(min = 1, max = 100, message = "Skill name must be between 1 and 100 characters")
     private String name;
 
+
+    private SkillType skillType;
     @NotNull(message = "Skill level is required (BEGINNER, INTERMEDIATE, ADVANCED)")
     private SkillLevel level;
 
@@ -18,5 +21,7 @@ public class SkillRequest {
     @Min(value = 0, message = "Experience cannot be negative")
     @Max(value = 50, message = "Experience in years cannot exceed 50")
     private Integer experienceInYears;
+
+
 }
 

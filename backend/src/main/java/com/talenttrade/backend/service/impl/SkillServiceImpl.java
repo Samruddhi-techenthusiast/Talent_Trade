@@ -30,13 +30,18 @@ public class SkillServiceImpl implements SkillService {
     @Override
     @Transactional
     public SkillResponse addSkill(SkillRequest request, UserPrincipal currentUser) {
-        log.info("User id={} is adding skill '{}'", currentUser.getId(), request.getName());
 
-        // Guard: no duplicate skill names for the same user (case-insensitive)
-        if (skillRepository.existsByUserIdAndNameIgnoreCase(currentUser.getId(), request.getName())) {
+        log.info("User id={} is adding skill '{}'",
+                currentUser.getId(),
+                request.getName());
+
+        if (skillRepository.existsByUserIdAndNameIgnoreCaseAndSkillType(
+                currentUser.getId(),
+                request.getName(),
+                request.getSkillType())) {
+
             throw new DuplicateResourceException(
-                    "You already have a skill named '" + request.getName() + "'. " +
-                            "Please update the existing one instead."
+                    "You already have a skill named '" + request.getName() + "'."
             );
         }
 
@@ -46,11 +51,12 @@ public class SkillServiceImpl implements SkillService {
                 .name(request.getName().trim())
                 .level(request.getLevel())
                 .experienceInYears(request.getExperienceInYears())
+                .skillType(request.getSkillType())   // IMPORTANT
                 .user(user)
                 .build();
 
         Skill saved = skillRepository.save(skill);
-        log.info("Skill id={} '{}' created for user id={}", saved.getId(), saved.getName(), user.getId());
+
         return SkillResponse.fromEntity(saved);
     }
 
@@ -73,19 +79,22 @@ public class SkillServiceImpl implements SkillService {
     @Override
     @Transactional
     public SkillResponse updateSkill(Long skillId, SkillRequest request, UserPrincipal currentUser) {
-        log.info("User id={} is updating skill id={}", currentUser.getId(), skillId);
 
-        // Single query: load skill AND verify ownership at the DB level
-        Skill skill = skillRepository
-                .findByIdAndUserId(skillId, currentUser.getId())
+        log.info("User id={} is updating skill id={}",
+                currentUser.getId(),
+                skillId);
+
+        Skill skill = skillRepository.findByIdAndUserId(skillId, currentUser.getId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Skill not found with id: " + skillId +
-                                " or you do not have permission to modify it."
+                        "Skill not found with id: " + skillId
                 ));
 
-        // Guard: new name must not clash with another skill already owned by this user
-        if (skillRepository.existsByUserIdAndNameIgnoreCaseAndIdNot(
-                currentUser.getId(), request.getName(), skillId)) {
+        if (skillRepository.existsByUserIdAndNameIgnoreCaseAndSkillTypeAndIdNot(
+                currentUser.getId(),
+                request.getName(),
+                request.getSkillType(),
+                skillId)) {
+
             throw new DuplicateResourceException(
                     "You already have another skill named '" + request.getName() + "'."
             );
@@ -94,9 +103,10 @@ public class SkillServiceImpl implements SkillService {
         skill.setName(request.getName().trim());
         skill.setLevel(request.getLevel());
         skill.setExperienceInYears(request.getExperienceInYears());
+        skill.setSkillType(request.getSkillType()); // IMPORTANT
 
         Skill updated = skillRepository.save(skill);
-        log.info("Skill id={} updated successfully", updated.getId());
+
         return SkillResponse.fromEntity(updated);
     }
 

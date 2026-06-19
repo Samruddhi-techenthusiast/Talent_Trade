@@ -73,7 +73,10 @@ public class SecurityConfig {
                         // ── Protected modules — fine-grained via @PreAuthorize ────────
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/skills/**").authenticated()
-                        .requestMatchers("/api/trades/**").authenticated()   // ← NEW
+                        .requestMatchers("/api/trades/**").authenticated()
+                        .requestMatchers("/api/match/**").authenticated()
+                        .requestMatchers("/api/ratings/**").authenticated()
+                        .requestMatchers("/api/notifications/**").authenticated()   // ← NEW
 
                         // ── Everything else ───────────────────────────────────────────
                         .anyRequest().authenticated()

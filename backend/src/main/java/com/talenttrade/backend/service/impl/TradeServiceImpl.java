@@ -11,11 +11,13 @@ import com.talenttrade.backend.model.entity.Skill;
 import com.talenttrade.backend.model.entity.TradeRequest;
 import com.talenttrade.backend.model.entity.TradeStatus;
 import com.talenttrade.backend.model.entity.User;
+import com.talenttrade.backend.model.entity.NotificationType;
 import com.talenttrade.backend.repository.SkillRepository;
 import com.talenttrade.backend.repository.TradeRequestRepository;
 import com.talenttrade.backend.repository.UserRepository;
 import com.talenttrade.backend.security.UserPrincipal;
 import com.talenttrade.backend.service.TradeService;
+import com.talenttrade.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class TradeServiceImpl implements TradeService {
     private final TradeRequestRepository tradeRequestRepository;
     private final UserRepository         userRepository;
     private final SkillRepository        skillRepository;
+    private final NotificationService notificationService;
 
     /** Trade statuses considered "active" for duplicate-request prevention. */
     private static final List<TradeStatus> ACTIVE_STATUSES =
@@ -82,7 +85,23 @@ public class TradeServiceImpl implements TradeService {
                 .build();
 
         TradeRequest saved = tradeRequestRepository.save(trade);
-        log.info("Trade id={} created: sender={} -> receiver={}", saved.getId(), senderId, receiver.getId());
+
+        log.info("Trade id={} created: sender={} -> receiver={}",
+                saved.getId(),
+                senderId,
+                receiver.getId());
+
+        notificationService.createNotification(
+                receiver,
+                "New Trade Request",
+                sender.getFullName()
+                        + " sent you a trade request: "
+                        + offeredSkill.getName()
+                        + " for "
+                        + requestedSkill.getName()
+                        + ".",
+                NotificationType.TRADE_REQUEST
+        );
 
         return TradeResponseDTO.fromEntity(saved);
     }
@@ -106,8 +125,23 @@ public class TradeServiceImpl implements TradeService {
         tradeRequestRepository.save(trade);
 
         log.info("Trade id={} accepted by user id={}", tradeId, currentUser.getId());
-        return TradeActionResponseDTO.of(tradeId, previous, TradeStatus.ACCEPTED,
-                "Trade request accepted successfully.");
+
+        notificationService.createNotification(
+                trade.getSender(),
+                "Trade Request Accepted",
+                trade.getReceiver().getFullName()
+                        + " accepted your trade request for "
+                        + trade.getRequestedSkill().getName()
+                        + ".",
+                NotificationType.TRADE_ACCEPTED
+        );
+
+        return TradeActionResponseDTO.of(
+                tradeId,
+                previous,
+                TradeStatus.ACCEPTED,
+                "Trade request accepted successfully."
+        );
     }
 
     // ── Reject Trade Request ──────────────────────────────────────────────────
@@ -129,8 +163,23 @@ public class TradeServiceImpl implements TradeService {
         tradeRequestRepository.save(trade);
 
         log.info("Trade id={} rejected by user id={}", tradeId, currentUser.getId());
-        return TradeActionResponseDTO.of(tradeId, previous, TradeStatus.REJECTED,
-                "Trade request rejected.");
+
+        notificationService.createNotification(
+                trade.getSender(),
+                "Trade Request Rejected",
+                trade.getReceiver().getFullName()
+                        + " declined your trade request for "
+                        + trade.getRequestedSkill().getName()
+                        + ".",
+                NotificationType.TRADE_REJECTED
+        );
+
+        return TradeActionResponseDTO.of(
+                tradeId,
+                previous,
+                TradeStatus.REJECTED,
+                "Trade request rejected."
+        );
     }
 
     // ── Cancel Trade Request ─────────────────────────────────────────────────
@@ -179,8 +228,13 @@ public class TradeServiceImpl implements TradeService {
         tradeRequestRepository.save(trade);
 
         log.info("Trade id={} marked COMPLETED by user id={}", tradeId, currentUser.getId());
-        return TradeActionResponseDTO.of(tradeId, previous, TradeStatus.COMPLETED,
-                "Trade marked as completed successfully.");
+
+        return TradeActionResponseDTO.of(
+                tradeId,
+                previous,
+                TradeStatus.COMPLETED,
+                "Trade marked as completed successfully."
+        );
     }
 
     // ── Get Trade By Id ───────────────────────────────────────────────────────
